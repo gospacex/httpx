@@ -157,3 +157,91 @@ var MiddlewareSet = wire.NewSet(
     NewRateLimitMiddleware,
 )
 ```
+
+## 测试策略
+
+### 单元测试
+
+- **接口 Mock**：为 `Server`、`Router` 等接口编写 mock 实现，用于测试业务逻辑不依赖具体 HTTP 框架
+- **适配器测试**：每个适配器（nethttp/gin/hertz）独立测试，验证接口实现正确性
+- **中间件测试**：独立测试每个中间件，无需启动服务器
+- **工具函数测试**：WebSocket 升级、错误处理等工具函数直接测试
+
+```go
+// 适配器测试示例
+func TestGinServer_Start(t *testing.T) {
+    server := NewGinServer()
+    // mock Router
+    // verify Start/Stop behavior
+}
+
+// 中间件测试示例
+func TestRecoverMiddleware(t *testing.T) {
+    middleware := NewRecoverMiddleware()
+    handler := middleware.Handle(nextHandler)
+    // panic 场景验证
+}
+```
+
+### 端到端测试
+
+- **HTTP 层测试**：启动真实服务器，发送真实 HTTP 请求，验证完整请求链路
+- **使用 httptest**：Go 标准库的 `httptest` 模拟请求，无需真实监听端口
+- **测试覆盖场景**：
+  - 路由注册与匹配
+  - 中间件链执行顺序
+  - 全局 vs 路由层 WebSocket
+  - 子路径路由 GROUP
+  - 错误响应格式
+
+```go
+func TestE2E_RouterGroup(t *testing.T) {
+    srv := NewGinServer()
+    router := srv.Router()
+
+    v1 := router.GROUP("/api/v1")
+    v1.GET("/users", func(c context.Context, hc HandlerContext) {})
+
+    req := httptest.NewRequest("GET", "/api/v1/users", nil)
+    w := httptest.NewRecorder()
+    srv.ServeHTTP(w, req)
+
+    // verify response
+}
+
+func TestE2E_WebSocket(t *testing.T) {
+    srv := NewGinServer()
+    srv.EnableWS(wsConfig)
+    router := srv.Router()
+    router.WS("/ws", wsHandler)
+
+    // upgrade request and verify ws connection
+}
+```
+
+### 测试目录结构
+
+```
+httpx/
+├── server.go
+├── router.go
+├── adapter/
+│   ├── nethttp/
+│   │   └── nethttp_test.go
+│   ├── gin/
+│   │   └── gin_test.go
+│   └── hertz/
+│       └── hertz_test.go
+├── middleware/
+│   ├── logger_test.go
+│   ├── recovery_test.go
+│   ├── cors_test.go
+│   └── ratelimit_test.go
+├── wire/
+│   ├── provider_test.go   # wire 生成的 provider 测试
+│   └── wire.go
+├── websocket/
+│   └── upgrade_test.go
+└── e2e/
+    └── server_test.go    # 端到端测试
+```
