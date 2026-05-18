@@ -13,7 +13,7 @@ import (
 	"github.com/gospacex/httpx"
 )
 
-type ginServer struct {
+type GinServer struct {
 	engine      *gin.Engine
 	router      *ginRouter
 	httpSrv     *http.Server
@@ -23,10 +23,10 @@ type ginServer struct {
 	mu          sync.RWMutex
 }
 
-func NewServer(opts ...ServerOption) *ginServer {
+func NewServer(opts ...ServerOption) *GinServer {
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
-	srv := &ginServer{
+	srv := &GinServer{
 		engine:  engine,
 		router:  newGinRouter(engine),
 		httpSrv: &http.Server{Addr: "", Handler: engine},
@@ -37,15 +37,15 @@ func NewServer(opts ...ServerOption) *ginServer {
 	return srv
 }
 
-type ServerOption func(*ginServer)
+type ServerOption func(*GinServer)
 
 func WithWSConfig(cfg *httpx.WSConfig) ServerOption {
-	return func(s *ginServer) {
+	return func(s *GinServer) {
 		s.wsConfig = cfg
 	}
 }
 
-func (s *ginServer) Start(addr string) error {
+func (s *GinServer) Start(addr string) error {
 	s.mu.Lock()
 	s.running = true
 	s.mu.Unlock()
@@ -54,7 +54,7 @@ func (s *ginServer) Start(addr string) error {
 	return s.httpSrv.ListenAndServe()
 }
 
-func (s *ginServer) Stop(ctx context.Context) error {
+func (s *GinServer) Stop(ctx context.Context) error {
 	s.mu.Lock()
 	s.running = false
 	s.mu.Unlock()
@@ -62,7 +62,7 @@ func (s *ginServer) Stop(ctx context.Context) error {
 	return s.httpSrv.Shutdown(ctx)
 }
 
-func (s *ginServer) StartWithGraceful(opts ...*httpx.StartOption) error {
+func (s *GinServer) StartWithGraceful(opts ...*httpx.StartOption) error {
 	opt := httpx.DefaultStartOption()
 	for _, o := range opts {
 		if o != nil {
@@ -102,7 +102,7 @@ func (s *ginServer) StartWithGraceful(opts ...*httpx.StartOption) error {
 	return err
 }
 
-func (s *ginServer) GracefulShutdown(ctx context.Context) error {
+func (s *GinServer) GracefulShutdown(ctx context.Context) error {
 	s.mu.Lock()
 	s.running = false
 	s.mu.Unlock()
@@ -110,22 +110,45 @@ func (s *ginServer) GracefulShutdown(ctx context.Context) error {
 	return s.httpSrv.Shutdown(ctx)
 }
 
-func (s *ginServer) IsRunning() bool {
+func (s *GinServer) Engine() *gin.Engine {
+	return s.engine
+}
+
+func (s *GinServer) IsRunning() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.running
 }
 
-func (s *ginServer) Router() httpx.Router {
+func (s *GinServer) Router() httpx.Router {
 	return s.router
 }
 
-func (s *ginServer) Use(middleware ...httpx.MiddlewareFunc) httpx.Server {
-	s.middlewares = append(s.middlewares, middleware...)
+func (s *GinServer) Use(middleware ...httpx.MiddlewareFunc) httpx.Server {
+	for _, m := range middleware {
+		s.middlewares = append(s.middlewares, m)
+		s.engine.Use(toGinMiddleware(m))
+	}
 	return s
 }
 
-func (s *ginServer) EnableWS(wsConfig *httpx.WSConfig) httpx.Server {
+func toGinMiddleware(m httpx.MiddlewareFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		hc := &ginHandlerContext{GinCtx: c}
+		currentCtx := c.Request.Context()
+
+		var next httpx.HandlerFunc
+		next = func(ctx context.Context, hc httpx.HandlerContext) {
+			c.Request = c.Request.WithContext(ctx)
+			c.Next()
+		}
+
+		wrapped := m(next)
+		wrapped(currentCtx, hc)
+	}
+}
+
+func (s *GinServer) EnableWS(wsConfig *httpx.WSConfig) httpx.Server {
 	s.wsConfig = wsConfig
 	return s
 }
@@ -136,6 +159,48 @@ type ginRouter struct {
 
 func newGinRouter(engine *gin.Engine) *ginRouter {
 	return &ginRouter{engine: engine}
+}
+
+type ginRouterGroup struct {
+	*ginRouter
+	prefix string
+}
+
+func (r *ginRouter) GROUP(prefix string, mw ...httpx.MiddlewareFunc) *httpx.RouterGroup {
+	return &httpx.RouterGroup{
+		Prefix: prefix,
+		Router: &ginRouterGroup{ginRouter: r, prefix: prefix},
+	}
+}
+
+func (g *ginRouterGroup) GET(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	g.engine.GET(g.prefix+path, g.convertHandlers(handlers)...)
+	return g
+}
+
+func (g *ginRouterGroup) POST(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	g.engine.POST(g.prefix+path, g.convertHandlers(handlers)...)
+	return g
+}
+
+func (g *ginRouterGroup) PUT(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	g.engine.PUT(g.prefix+path, g.convertHandlers(handlers)...)
+	return g
+}
+
+func (g *ginRouterGroup) DELETE(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	g.engine.DELETE(g.prefix+path, g.convertHandlers(handlers)...)
+	return g
+}
+
+func (g *ginRouterGroup) PATCH(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	g.engine.PATCH(g.prefix+path, g.convertHandlers(handlers)...)
+	return g
+}
+
+func (g *ginRouterGroup) WS(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	g.engine.GET(g.prefix+path, g.convertHandlers(handlers)...)
+	return g
 }
 
 func (r *ginRouter) GET(path string, handlers ...httpx.HandlerFunc) httpx.Router {
@@ -161,13 +226,6 @@ func (r *ginRouter) DELETE(path string, handlers ...httpx.HandlerFunc) httpx.Rou
 func (r *ginRouter) PATCH(path string, handlers ...httpx.HandlerFunc) httpx.Router {
 	r.engine.PATCH(path, r.convertHandlers(handlers)...)
 	return r
-}
-
-func (r *ginRouter) GROUP(prefix string, mw ...httpx.MiddlewareFunc) *httpx.RouterGroup {
-	return &httpx.RouterGroup{
-		Prefix: prefix,
-		Router: &ginRouter{engine: r.engine},
-	}
 }
 
 func (r *ginRouter) WS(path string, handlers ...httpx.HandlerFunc) httpx.Router {
