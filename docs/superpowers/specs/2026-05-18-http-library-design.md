@@ -244,4 +244,50 @@ httpx/
 │   └── upgrade_test.go
 └── e2e/
     └── server_test.go    # 端到端测试
+
+### 压力测试
+
+使用 `wrk` 或 Go 内置 benchmark 进行性能测试。
+
+- **Benchmark 测试**：Go 标准库 `testing.B` 进行微基准测试
+- **HTTP 压测工具**：`wrk` 或 `ghz` 进行真实压力测试
+- **测试指标**：
+  - QPS（每秒请求数）
+  - 延迟分布（P50/P90/P99）
+  - 内存分配
+  - 并发连接数
+
+```go
+// Benchmark 示例
+func BenchmarkRouter_Get(b *testing.B) {
+    srv := NewGinServer()
+    router := srv.Router()
+    router.GET("/users/:id", handler)
+
+    // 使用 httptest 进行基准测试
+    b.ReportAllocs()
+    for i := 0; i < b.N; i++ {
+        req := httptest.NewRequest("GET", "/users/1", nil)
+        w := httptest.NewRecorder()
+        srv.ServeHTTP(w, req)
+    }
+}
+```
+
+```bash
+# wrk 压测示例
+wrk -t12 -c400 -d30s http://localhost:8080/api/v1/users
+
+# ghz 压测示例
+ghz --insecure --connections 100 --duration 30s http://localhost:8080/api/v1/users
+```
+
+### 压测场景
+
+| 场景 | 说明 |
+|------|------|
+| 路由匹配 | 各种路径模式（静态/参数/通配）的匹配性能 |
+| 中间件链 | 不同数量中间件的吞吐量影响 |
+| WebSocket | 长连接并发数、消息吞吐量 |
+| 并发连接 | 高并发下的 QPS 和延迟稳定性 |
 ```
