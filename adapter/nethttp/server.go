@@ -2,6 +2,7 @@ package nethttp
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -19,6 +20,7 @@ type netHttpServer struct {
 	running     bool
 	mu          sync.RWMutex
 	router      *netHttpRouter
+	addr        string
 }
 
 func NewServer(opts ...ServerOption) *netHttpServer {
@@ -36,6 +38,7 @@ type ServerOption func(*netHttpServer)
 func (s *netHttpServer) Start(addr string) error {
 	s.mu.Lock()
 	s.running = true
+	s.addr = addr
 	s.mu.Unlock()
 
 	s.httpSrv.Addr = addr
@@ -66,7 +69,13 @@ func (s *netHttpServer) StartWithGraceful(opts ...*httpx.StartOption) error {
 	}
 
 	go func() {
-		if err := s.Start(":8080"); err != nil && err != http.ErrServerClosed {
+		var err error
+		if opt.TLSConfig != nil {
+			err = s.StartTLS(opt.TLSConfig)
+		} else {
+			err = s.Start(s.addr)
+		}
+		if err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %s\n", err)
 		}
 	}()
@@ -88,6 +97,19 @@ func (s *netHttpServer) StartWithGraceful(opts ...*httpx.StartOption) error {
 	}
 
 	return err
+}
+
+func (s *netHttpServer) StartTLS(cfg *httpx.TLSConfig) error {
+	s.mu.Lock()
+	s.running = true
+	s.mu.Unlock()
+
+	addr := s.addr
+	if addr == "" {
+		addr = ":0"
+	}
+	s.httpSrv.Addr = addr
+	return s.httpSrv.ListenAndServeTLS(cfg.CertFile, cfg.KeyFile)
 }
 
 func (s *netHttpServer) GracefulShutdown(ctx context.Context) error {
@@ -164,8 +186,9 @@ func (r *netHttpRouter) WS(path string, handlers ...httpx.HandlerFunc) httpx.Rou
 }
 
 type netHttpHandlerContext struct {
-	req  *http.Request
-	resp http.ResponseWriter
+	req     *http.Request
+	resp    http.ResponseWriter
+	aborted bool
 }
 
 func (h *netHttpHandlerContext) Request() interface{} { return h.req }
@@ -173,3 +196,16 @@ func (h *netHttpHandlerContext) Response() interface{} { return h.resp }
 func (h *netHttpHandlerContext) Param(key string) string { return "" }
 func (h *netHttpHandlerContext) Query(key string) string { return h.req.URL.Query().Get(key) }
 func (h *netHttpHandlerContext) Bind(into interface{}) error { return nil }
+
+func (h *netHttpHandlerContext) AbortWithStatus(code int) {
+	h.resp.WriteHeader(code)
+	h.aborted = true
+}
+
+func (h *netHttpHandlerContext) AbortJSON(code int, body interface{}) {
+	h.resp.Header().Set("Content-Type", "application/json")
+	h.resp.WriteHeader(code)
+	enc := json.NewEncoder(h.resp)
+	enc.Encode(body)
+	h.aborted = true
+}
