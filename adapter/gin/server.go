@@ -21,6 +21,7 @@ type GinServer struct {
 	middlewares []httpx.MiddlewareFunc
 	running     bool
 	mu          sync.RWMutex
+	addr        string
 }
 
 func NewServer(opts ...ServerOption) *GinServer {
@@ -48,6 +49,7 @@ func WithWSConfig(cfg *httpx.WSConfig) ServerOption {
 func (s *GinServer) Start(addr string) error {
 	s.mu.Lock()
 	s.running = true
+	s.addr = addr
 	s.mu.Unlock()
 
 	s.httpSrv.Addr = addr
@@ -78,7 +80,13 @@ func (s *GinServer) StartWithGraceful(opts ...*httpx.StartOption) error {
 	}
 
 	go func() {
-		if err := s.Start(":8080"); err != nil && err != http.ErrServerClosed {
+		var err error
+		if opt.TLSConfig != nil {
+			err = s.StartTLS(opt.TLSConfig)
+		} else {
+			err = s.Start(s.addr)
+		}
+		if err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %s\n", err)
 		}
 	}()
@@ -100,6 +108,19 @@ func (s *GinServer) StartWithGraceful(opts ...*httpx.StartOption) error {
 	}
 
 	return err
+}
+
+func (s *GinServer) StartTLS(cfg *httpx.TLSConfig) error {
+	s.mu.Lock()
+	s.running = true
+	s.mu.Unlock()
+
+	addr := s.addr
+	if addr == "" {
+		addr = ":0"
+	}
+	s.httpSrv.Addr = addr
+	return s.httpSrv.ListenAndServeTLS(cfg.CertFile, cfg.KeyFile)
 }
 
 func (s *GinServer) GracefulShutdown(ctx context.Context) error {
@@ -254,3 +275,5 @@ func (h *ginHandlerContext) Response() interface{}  { return h.GinCtx.Writer }
 func (h *ginHandlerContext) Param(key string) string { return h.GinCtx.Param(key) }
 func (h *ginHandlerContext) Query(key string) string { return h.GinCtx.Query(key) }
 func (h *ginHandlerContext) Bind(into interface{}) error { return h.GinCtx.Bind(into) }
+func (h *ginHandlerContext) AbortWithStatus(code int) { h.GinCtx.AbortWithStatus(code) }
+func (h *ginHandlerContext) AbortJSON(code int, body interface{}) { h.GinCtx.AbortWithStatusJSON(code, body) }
