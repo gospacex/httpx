@@ -2,6 +2,7 @@ package hertz
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 	"os"
 	"os/signal"
@@ -19,21 +20,57 @@ type hertzServer struct {
 	running  bool
 	mu       sync.RWMutex
 	router   *hertzRouter
+	addr     string
 }
 
 func NewServer(opts ...ServerOption) *hertzServer {
 	srv := server.Default()
-	return &hertzServer{
+	h := &hertzServer{
 		srv:    srv,
 		router: &hertzRouter{hertz: srv},
 	}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 type ServerOption func(*hertzServer)
 
+func WithHostPorts(addr string) ServerOption {
+	return func(s *hertzServer) {
+		s.addr = addr
+		s.srv = server.New(server.WithHostPorts(addr))
+		s.router = &hertzRouter{hertz: s.srv}
+	}
+}
+
+func WithTLS(cfg *httpx.TLSConfig) ServerOption {
+	return func(s *hertzServer) {
+		s.srv = server.New(
+			server.WithHostPorts(s.addr),
+			server.WithTLS(loadTLSConfig(cfg)),
+		)
+		s.router = &hertzRouter{hertz: s.srv}
+	}
+}
+
+func loadTLSConfig(cfg *httpx.TLSConfig) *tls.Config {
+	tlsCfg, err := tls.LoadX509KeyPair(cfg.CertFile, cfg.KeyFile)
+	if err != nil {
+		return &tls.Config{}
+	}
+	return &tls.Config{
+		Certificates: []tls.Certificate{tlsCfg},
+	}
+}
+
 func (s *hertzServer) Start(addr string) error {
 	s.mu.Lock()
 	s.running = true
+	if s.addr == "" {
+		s.addr = addr
+	}
 	s.mu.Unlock()
 
 	return s.srv.Run()
@@ -44,7 +81,7 @@ func (s *hertzServer) Stop(ctx context.Context) error {
 	s.running = false
 	s.mu.Unlock()
 
-	return nil
+	return s.srv.Shutdown(ctx)
 }
 
 func (s *hertzServer) StartWithGraceful(opts ...*httpx.StartOption) error {
@@ -62,7 +99,11 @@ func (s *hertzServer) StartWithGraceful(opts ...*httpx.StartOption) error {
 		quit = ch
 	}
 
-	go s.srv.Run()
+	go func() {
+		if err := s.Start(s.addr); err != nil {
+			log.Fatalf("listen: %s\n", err)
+		}
+	}()
 
 	<-quit
 	log.Println("Shutdown Server ...")
@@ -88,8 +129,7 @@ func (s *hertzServer) GracefulShutdown(ctx context.Context) error {
 	s.running = false
 	s.mu.Unlock()
 
-	s.srv.Shutdown(ctx)
-	return nil
+	return s.srv.Shutdown(ctx)
 }
 
 func (s *hertzServer) IsRunning() bool {
@@ -191,3 +231,5 @@ func (h *hertzHandlerContext) Response() interface{} { return h.RequestContext.R
 func (h *hertzHandlerContext) Param(key string) string { return h.RequestContext.Param(key) }
 func (h *hertzHandlerContext) Query(key string) string { return h.RequestContext.Query(key) }
 func (h *hertzHandlerContext) Bind(into interface{}) error { return h.RequestContext.Bind(into) }
+func (h *hertzHandlerContext) AbortWithStatus(code int) { h.RequestContext.AbortWithStatus(code) }
+func (h *hertzHandlerContext) AbortJSON(code int, body interface{}) { h.RequestContext.JSON(code, body); h.RequestContext.Abort() }
