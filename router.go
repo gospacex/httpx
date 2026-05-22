@@ -11,6 +11,7 @@ type Router interface {
 }
 
 type RouterGroup struct {
-	Router Router
-	Prefix string
+	Router      Router
+	Prefix      string
+	middlewares []MiddlewareFunc
 }

@@ -184,43 +184,59 @@ func newGinRouter(engine *gin.Engine) *ginRouter {
 
 type ginRouterGroup struct {
 	*ginRouter
-	prefix string
+	prefix      string
+	middlewares []httpx.MiddlewareFunc
 }
 
 func (r *ginRouter) GROUP(prefix string, mw ...httpx.MiddlewareFunc) *httpx.RouterGroup {
 	return &httpx.RouterGroup{
 		Prefix: prefix,
-		Router: &ginRouterGroup{ginRouter: r, prefix: prefix},
+		Router: &ginRouterGroup{ginRouter: r, prefix: prefix, middlewares: mw},
 	}
 }
 
+func (g *ginRouterGroup) wrapHandlers(handlers []httpx.HandlerFunc) []gin.HandlerFunc {
+	result := make([]gin.HandlerFunc, 0, len(g.middlewares)+len(handlers))
+	for _, m := range g.middlewares {
+		result = append(result, toGinMiddleware(m))
+	}
+	result = append(result, g.convertHandlers(handlers)...)
+	return result
+}
+
 func (g *ginRouterGroup) GET(path string, handlers ...httpx.HandlerFunc) httpx.Router {
-	g.engine.GET(g.prefix+path, g.convertHandlers(handlers)...)
+	wrapped := g.wrapHandlers(handlers)
+	g.engine.GET(g.prefix+path, wrapped...)
 	return g
 }
 
 func (g *ginRouterGroup) POST(path string, handlers ...httpx.HandlerFunc) httpx.Router {
-	g.engine.POST(g.prefix+path, g.convertHandlers(handlers)...)
+	wrapped := g.wrapHandlers(handlers)
+	g.engine.POST(g.prefix+path, wrapped...)
 	return g
 }
 
 func (g *ginRouterGroup) PUT(path string, handlers ...httpx.HandlerFunc) httpx.Router {
-	g.engine.PUT(g.prefix+path, g.convertHandlers(handlers)...)
+	wrapped := g.wrapHandlers(handlers)
+	g.engine.PUT(g.prefix+path, wrapped...)
 	return g
 }
 
 func (g *ginRouterGroup) DELETE(path string, handlers ...httpx.HandlerFunc) httpx.Router {
-	g.engine.DELETE(g.prefix+path, g.convertHandlers(handlers)...)
+	wrapped := g.wrapHandlers(handlers)
+	g.engine.DELETE(g.prefix+path, wrapped...)
 	return g
 }
 
 func (g *ginRouterGroup) PATCH(path string, handlers ...httpx.HandlerFunc) httpx.Router {
-	g.engine.PATCH(g.prefix+path, g.convertHandlers(handlers)...)
+	wrapped := g.wrapHandlers(handlers)
+	g.engine.PATCH(g.prefix+path, wrapped...)
 	return g
 }
 
 func (g *ginRouterGroup) WS(path string, handlers ...httpx.HandlerFunc) httpx.Router {
-	g.engine.GET(g.prefix+path, g.convertHandlers(handlers)...)
+	wrapped := g.wrapHandlers(handlers)
+	g.engine.GET(g.prefix+path, wrapped...)
 	return g
 }
 

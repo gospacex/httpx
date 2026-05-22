@@ -174,11 +174,62 @@ func (r *netHttpRouter) PATCH(path string, handlers ...httpx.HandlerFunc) httpx.
 	return r.GET(path, handlers...)
 }
 
+type netHttpRouterGroup struct {
+	*netHttpRouter
+	prefix      string
+	middlewares []httpx.MiddlewareFunc
+}
+
 func (r *netHttpRouter) GROUP(prefix string, mw ...httpx.MiddlewareFunc) *httpx.RouterGroup {
 	return &httpx.RouterGroup{
-		Router: r,
 		Prefix: prefix,
+		Router: &netHttpRouterGroup{netHttpRouter: r, prefix: prefix, middlewares: mw},
 	}
+}
+
+func (g *netHttpRouterGroup) wrapHandlers(handlers []httpx.HandlerFunc) []httpx.HandlerFunc {
+	if len(handlers) == 0 {
+		return nil
+	}
+	var wrapped httpx.HandlerFunc = handlers[len(handlers)-1]
+	for i := len(g.middlewares) - 1; i >= 0; i-- {
+		wrapped = g.middlewares[i](wrapped)
+	}
+	return []httpx.HandlerFunc{wrapped}
+}
+
+func (g *netHttpRouterGroup) GET(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	wrapped := g.wrapHandlers(handlers)
+	g.mux.HandleFunc(g.prefix+path, func(w http.ResponseWriter, req *http.Request) {
+		hc := &netHttpHandlerContext{req: req, resp: w}
+		for _, h := range wrapped {
+			h(req.Context(), hc)
+			if hc.aborted {
+				return
+			}
+		}
+	})
+	return g
+}
+
+func (g *netHttpRouterGroup) POST(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	return g.GET(path, handlers...)
+}
+
+func (g *netHttpRouterGroup) PUT(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	return g.GET(path, handlers...)
+}
+
+func (g *netHttpRouterGroup) DELETE(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	return g.GET(path, handlers...)
+}
+
+func (g *netHttpRouterGroup) PATCH(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	return g.GET(path, handlers...)
+}
+
+func (g *netHttpRouterGroup) WS(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	return g.GET(path, handlers...)
 }
 
 func (r *netHttpRouter) WS(path string, handlers ...httpx.HandlerFunc) httpx.Router {

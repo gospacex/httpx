@@ -205,11 +205,94 @@ func (r *hertzRouter) PATCH(path string, handlers ...httpx.HandlerFunc) httpx.Ro
 	return r
 }
 
+type hertzRouterGroup struct {
+	*hertzRouter
+	prefix      string
+	middlewares []httpx.MiddlewareFunc
+}
+
 func (r *hertzRouter) GROUP(prefix string, mw ...httpx.MiddlewareFunc) *httpx.RouterGroup {
 	return &httpx.RouterGroup{
-		Router: &hertzRouter{hertz: r.hertz},
 		Prefix: prefix,
+		Router: &hertzRouterGroup{hertzRouter: r, prefix: prefix, middlewares: mw},
 	}
+}
+
+func (g *hertzRouterGroup) wrapHandlers(handlers []httpx.HandlerFunc) []httpx.HandlerFunc {
+	if len(handlers) == 0 {
+		return nil
+	}
+	var wrapped httpx.HandlerFunc = handlers[len(handlers)-1]
+	for i := len(g.middlewares) - 1; i >= 0; i-- {
+		wrapped = g.middlewares[i](wrapped)
+	}
+	return []httpx.HandlerFunc{wrapped}
+}
+
+func (g *hertzRouterGroup) GET(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	wrapped := g.wrapHandlers(handlers)
+	g.hertz.GET(g.prefix+path, func(ctx context.Context, c *app.RequestContext) {
+		hc := &hertzHandlerContext{RequestContext: c}
+		for _, h := range wrapped {
+			h(ctx, hc)
+		}
+	})
+	return g
+}
+
+func (g *hertzRouterGroup) POST(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	wrapped := g.wrapHandlers(handlers)
+	g.hertz.POST(g.prefix+path, func(ctx context.Context, c *app.RequestContext) {
+		hc := &hertzHandlerContext{RequestContext: c}
+		for _, h := range wrapped {
+			h(ctx, hc)
+		}
+	})
+	return g
+}
+
+func (g *hertzRouterGroup) PUT(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	wrapped := g.wrapHandlers(handlers)
+	g.hertz.PUT(g.prefix+path, func(ctx context.Context, c *app.RequestContext) {
+		hc := &hertzHandlerContext{RequestContext: c}
+		for _, h := range wrapped {
+			h(ctx, hc)
+		}
+	})
+	return g
+}
+
+func (g *hertzRouterGroup) DELETE(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	wrapped := g.wrapHandlers(handlers)
+	g.hertz.DELETE(g.prefix+path, func(ctx context.Context, c *app.RequestContext) {
+		hc := &hertzHandlerContext{RequestContext: c}
+		for _, h := range wrapped {
+			h(ctx, hc)
+		}
+	})
+	return g
+}
+
+func (g *hertzRouterGroup) PATCH(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	wrapped := g.wrapHandlers(handlers)
+	g.hertz.PATCH(g.prefix+path, func(ctx context.Context, c *app.RequestContext) {
+		hc := &hertzHandlerContext{RequestContext: c}
+		for _, h := range wrapped {
+			h(ctx, hc)
+		}
+	})
+	return g
+}
+
+func (g *hertzRouterGroup) WS(path string, handlers ...httpx.HandlerFunc) httpx.Router {
+	wrapped := g.wrapHandlers(handlers)
+	g.hertz.GET(g.prefix+path, func(ctx context.Context, c *app.RequestContext) {
+		hc := &hertzHandlerContext{RequestContext: c}
+		for _, h := range wrapped {
+			h(ctx, hc)
+		}
+	})
+	return g
 }
 
 func (r *hertzRouter) WS(path string, handlers ...httpx.HandlerFunc) httpx.Router {
