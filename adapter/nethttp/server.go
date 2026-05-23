@@ -268,3 +268,9 @@ func (h *netHttpHandlerContext) AbortJSON(code int, body interface{}) {
 	enc.Encode(body)
 	h.aborted = true
 }
+
+func init() {
+	httpx.RegisterAdapter("nethttp", func() httpx.Server {
+		return NewServer()
+	})
+}
