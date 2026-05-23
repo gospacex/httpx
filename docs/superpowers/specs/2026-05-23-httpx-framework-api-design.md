@@ -316,6 +316,7 @@ type AdapterFactory func() Server
 - 创建：`examples/demo/main.go`
 - 创建：`examples/demo/route.go`
 - 创建：`examples/demo/config.yaml`
+- 创建：`examples/demo/config_hertz.yaml`
 
 ```go
 // main.go
@@ -337,16 +338,26 @@ func setupRoutes(app *httpx.App) {
 ```
 
 ```yaml
-# config.yaml
+# config.yaml (gin)
 adapter: gin
 port: 8080
 ```
 
-- [ ] **步骤 1：实现示例代码**
+```yaml
+# config_hertz.yaml (hertz)
+adapter: hertz
+port: 8080
+```
 
-- [ ] **步骤 2：运行测试**
+- [ ] **步骤 1：实现示例代码（gin 配置）**
 
-- [ ] **步骤 3：Commit**
+- [ ] **步骤 2：实现示例代码（hertz 配置）**
+
+- [ ] **步骤 3：运行 gin 测试**
+
+- [ ] **步骤 4：运行 hertz 测试**
+
+- [ ] **步骤 5：Commit**
 
 ---
 
@@ -359,6 +370,33 @@ port: 8080
 - [ ] **步骤 3：运行 `go test ./...` 确认测试通过**
 
 - [ ] **步骤 4：Commit**
+
+---
+
+## 测试覆盖要求
+
+测试必须覆盖 **gin** 和 **hertz** 两种 adapter 场景：
+
+1. **App 创建和路由注册** — 使用 gin 和 hertz 分别创建 App，注册相同路由，验证行为一致
+2. **全局中间件** — 分别在 gin 和 hertz 上测试 `app.Use()` 效果
+3. **单路由中间件** — 分别在 gin 和 hertz 上测试 `app.GET().Use()` 链式调用
+4. **分组路由** — 分别在 gin 和 hertz 上测试 `app.Group()` 创建分组
+5. **启动和停止** — 分别在 gin 和 hertz 上测试 `app.Run()` 和 graceful shutdown
+
+测试代码示例：
+```go
+func TestGinApp(t *testing.T) {
+    app := httpx.new()
+    app.GET("/health", healthHandler)
+    // 验证 gin adapter 行为
+}
+
+func TestHertzApp(t *testing.T) {
+    app := httpx.new()
+    app.GET("/health", healthHandler)
+    // 验证 hertz adapter 行为
+}
+```
 
 ---
 
