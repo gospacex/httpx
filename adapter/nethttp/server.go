@@ -232,6 +232,14 @@ func (g *netHttpRouterGroup) WS(path string, handlers ...httpx.HandlerFunc) http
 	return g.GET(path, handlers...)
 }
 
+func (g *netHttpRouterGroup) Use(middlewares ...httpx.MiddlewareFunc) *httpx.RouterGroup {
+	g.middlewares = append(g.middlewares, middlewares...)
+	return &httpx.RouterGroup{
+		Prefix: g.prefix,
+		Router: g,
+	}
+}
+
 func (r *netHttpRouter) WS(path string, handlers ...httpx.HandlerFunc) httpx.Router {
 	return r.GET(path, handlers...)
 }

@@ -295,6 +295,14 @@ func (g *hertzRouterGroup) WS(path string, handlers ...httpx.HandlerFunc) httpx.
 	return g
 }
 
+func (g *hertzRouterGroup) Use(middlewares ...httpx.MiddlewareFunc) *httpx.RouterGroup {
+	g.middlewares = append(g.middlewares, middlewares...)
+	return &httpx.RouterGroup{
+		Prefix: g.prefix,
+		Router: g,
+	}
+}
+
 func (r *hertzRouter) WS(path string, handlers ...httpx.HandlerFunc) httpx.Router {
 	r.hertz.GET(path, func(ctx context.Context, c *app.RequestContext) {
 		hc := &hertzHandlerContext{RequestContext: c}
