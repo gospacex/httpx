@@ -9,7 +9,8 @@ type App struct {
 	middlewares []MiddlewareFunc
 }
 
-func newApp() *App {
+// New creates a new App instance
+func New() *App {
 	return &App{
 		router: newRouter(),
 	}
