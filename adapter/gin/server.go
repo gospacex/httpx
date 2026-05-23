@@ -293,3 +293,9 @@ func (h *ginHandlerContext) Query(key string) string { return h.GinCtx.Query(key
 func (h *ginHandlerContext) Bind(into interface{}) error { return h.GinCtx.Bind(into) }
 func (h *ginHandlerContext) AbortWithStatus(code int) { h.GinCtx.AbortWithStatus(code) }
 func (h *ginHandlerContext) AbortJSON(code int, body interface{}) { h.GinCtx.AbortWithStatusJSON(code, body) }
+
+func init() {
+	httpx.RegisterAdapter("gin", func() httpx.Server {
+		return NewServer()
+	})
+}
