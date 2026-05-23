@@ -324,3 +324,9 @@ func (h *hertzHandlerContext) Query(key string) string { return h.RequestContext
 func (h *hertzHandlerContext) Bind(into interface{}) error { return h.RequestContext.Bind(into) }
 func (h *hertzHandlerContext) AbortWithStatus(code int) { h.RequestContext.AbortWithStatus(code) }
 func (h *hertzHandlerContext) AbortJSON(code int, body interface{}) { h.RequestContext.JSON(code, body); h.RequestContext.Abort() }
+
+func init() {
+	httpx.RegisterAdapter("hertz", func() httpx.Server {
+		return NewServer()
+	})
+}
