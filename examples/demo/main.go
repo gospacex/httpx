@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gospacex/httpx"
+	_ "github.com/gospacex/httpx/adapter/gin" // 副作用：注册 gin adapter
 )
 
 // User 数据结构
