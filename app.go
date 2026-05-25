@@ -7,13 +7,27 @@ import (
 type App struct {
 	router      *routerImpl
 	middlewares []MiddlewareFunc
+	config      *Config
+	adapter     AdapterFactory
 }
 
-// New creates a new App instance
-func New() *App {
-	return &App{
-		router: newRouter(),
+// New creates a new App instance with the configuration from the specified file path.
+func New(configPath string) (*App, error) {
+	cfg, err := LoadConfig(configPath)
+	if err != nil {
+		return nil, err
 	}
+
+	factory, err := getAdapter(cfg.Adapter)
+	if err != nil {
+		return nil, err
+	}
+
+	return &App{
+		router:   newRouter(),
+		config:   cfg,
+		adapter:  factory,
+	}, nil
 }
 
 func (a *App) GET(path string, handlers ...HandlerFunc) *Route {
@@ -49,18 +63,8 @@ func (a *App) Use(mw ...MiddlewareFunc) *App {
 	return a
 }
 
-func (a *App) Run(configPath string) error {
-	cfg, err := LoadConfig(configPath)
-	if err != nil {
-		return err
-	}
-
-	factory, err := getAdapter(cfg.Adapter)
-	if err != nil {
-		return err
-	}
-
-	srv := factory()
+func (a *App) Run() error {
+	srv := a.adapter()
 
 	for _, mw := range a.middlewares {
 		srv.Use(mw)
@@ -69,6 +73,19 @@ func (a *App) Run(configPath string) error {
 	router := srv.Router()
 	a.router.setupToRouter(router)
 
-	addr := fmt.Sprintf(":%d", cfg.Port)
+	addr := fmt.Sprintf(":%d", a.config.Port)
+	return srv.Start(addr)
+}
+
+func (a *App) RunOnAddr(addr string) error {
+	srv := a.adapter()
+
+	for _, mw := range a.middlewares {
+		srv.Use(mw)
+	}
+
+	router := srv.Router()
+	a.router.setupToRouter(router)
+
 	return srv.Start(addr)
 }

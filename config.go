@@ -12,6 +12,13 @@ type Config struct {
 }
 
 func LoadConfig(path string) (*Config, error) {
+	if path == "" {
+		return &Config{
+			Adapter: "hertz",
+			Port:    8080,
+		}, nil
+	}
+
 	viper.SetConfigFile(path)
 	viper.SetConfigType("yaml")
 

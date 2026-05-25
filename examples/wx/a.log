@@ -1,0 +1,13 @@
+=== RUN   TestWebSocketConnection
+    websocket_test.go:95: Connecting to ws://localhost:8086/ws
+--- PASS: TestWebSocketConnection (5.53s)
+=== RUN   TestWebSocketMessageBroadcast
+    websocket_test.go:114: Connecting to ws://localhost:8086/ws
+    websocket_test.go:129: Sending message: {"type":"message","content":"Message1814","user":"User3"}
+    websocket_test.go:141: Received broadcast: {"type":"message","content":"Message1814","user":"User3","time":"2026-05-24T23:18:08+08:00"}
+--- PASS: TestWebSocketMessageBroadcast (5.71s)
+=== RUN   TestHTTPEndpoint
+    websocket_test.go:171: HTTP request to http://localhost:8086/
+--- PASS: TestHTTPEndpoint (6.00s)
+PASS
+ok  	github.com/gospacex/httpx/examples/wx	18.018s

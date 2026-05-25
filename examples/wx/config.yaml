@@ -1,0 +1,2 @@
+adapter: gin
+port: 8086
