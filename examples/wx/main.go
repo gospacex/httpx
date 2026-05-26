@@ -94,14 +94,14 @@ func (sw *syncWriter) Write(p []byte) (int, error) {
 }
 
 func wsHandler(room *ChatRoom) httpx.HandlerFunc {
-	return func(ctx context.Context, hc httpx.HandlerContext) {
+	return func(ctx context.Context, hc httpx.HandlerContext) error {
 		req := hc.Request().(*http.Request)
 		resp := hc.Response().(http.ResponseWriter)
 		log.Printf("[WS] Connection from %s %s", req.RemoteAddr, req.URL.Path)
 		conn, err := upgrader.Upgrade(resp, req, nil)
 		if err != nil {
 			log.Printf("[WS] Upgrade failed: %v", err)
-			return
+			return nil
 		}
 		log.Printf("[WS] Connected: %s", req.RemoteAddr)
 
@@ -137,6 +137,7 @@ func wsHandler(room *ChatRoom) httpx.HandlerFunc {
 				room.broadcast <- msg
 			}
 		}()
+		return nil
 	}
 }
 
@@ -164,7 +165,7 @@ func main() {
 	app.WS("/ws", wsHandler(room))
 
 	// HTTP endpoints for info
-	app.GET("/", func(ctx context.Context, hc httpx.HandlerContext) {
+	app.GET("/", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, map[string]interface{}{
 			"service": "httpx WebSocket Demo",
 			"version": "1.0.0",
@@ -178,9 +179,10 @@ func main() {
 				"message":    "Server broadcasts to all connected clients",
 			},
 		})
+		return nil
 	})
 
-	app.GET("/status", func(ctx context.Context, hc httpx.HandlerContext) {
+	app.GET("/status", func(ctx context.Context, hc httpx.HandlerContext) error {
 		room.mu.Lock()
 		count := len(room.clients)
 		room.mu.Unlock()
@@ -188,6 +190,7 @@ func main() {
 			"clients": count,
 			"uptime":  "running",
 		})
+		return nil
 	})
 
 	fmt.Print(`

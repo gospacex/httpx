@@ -131,7 +131,7 @@ func (s *GinServer) GracefulShutdown(ctx context.Context) error {
 	return s.httpSrv.Shutdown(ctx)
 }
 
-func (s *GinServer) Engine() *gin.Engine {
+func (s *GinServer) Engine() interface{} {
 	return s.engine
 }
 
@@ -159,9 +159,10 @@ func toGinMiddleware(m httpx.MiddlewareFunc) gin.HandlerFunc {
 		currentCtx := c.Request.Context()
 
 		var next httpx.HandlerFunc
-		next = func(ctx context.Context, hc httpx.HandlerContext) {
+		next = func(ctx context.Context, hc httpx.HandlerContext) error {
 			c.Request = c.Request.WithContext(ctx)
 			c.Next()
+			return nil
 		}
 
 		wrapped := m(next)

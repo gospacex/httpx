@@ -15,6 +15,12 @@ type Server interface {
 	EnableWS(wsConfig *WSConfig) Server
 }
 
+type TestableServer interface {
+	Server
+	// Engine returns the underlying HTTP server engine for testing purposes
+	Engine() interface{}
+}
+
 type GracefulServer interface {
 	Server
 	StartWithGraceful(opts ...*StartOption) error

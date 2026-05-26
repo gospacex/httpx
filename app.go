@@ -89,3 +89,16 @@ func (a *App) RunOnAddr(addr string) error {
 
 	return srv.Start(addr)
 }
+
+func (a *App) Adapter() Server {
+	srv := a.adapter()
+
+	for _, mw := range a.middlewares {
+		srv.Use(mw)
+	}
+
+	router := srv.Router()
+	a.router.setupToRouter(router)
+
+	return srv
+}

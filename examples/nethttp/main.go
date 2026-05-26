@@ -43,31 +43,36 @@ func routingExample() {
 	// 这里演示如何创建 router 并注册路由
 	router := nethttp.NewRouter()
 
-	router.GET("/hello", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.GET("/hello", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, map[string]string{"message": "hello"})
+		return nil
 	})
 
-	router.POST("/data", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.POST("/data", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, map[string]string{"status": "created"})
+		return nil
 	})
 
-	router.PUT("/update", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.PUT("/update", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, map[string]string{"status": "updated"})
+		return nil
 	})
 
-	router.DELETE("/remove", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.DELETE("/remove", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, map[string]string{"status": "deleted"})
+		return nil
 	})
 
-	router.PATCH("/patch", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.PATCH("/patch", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, map[string]string{"status": "patched"})
+		return nil
 	})
 
 	// 使用 srv.Use() 添加中间件
 	srv.Use(func(next httpx.HandlerFunc) httpx.HandlerFunc {
-		return func(ctx context.Context, hc httpx.HandlerContext) {
+		return func(ctx context.Context, hc httpx.HandlerContext) error {
 			fmt.Println("  [middleware] before handler")
-			next(ctx, hc)
+			return next(ctx, hc)
 		}
 	})
 
@@ -78,9 +83,10 @@ func gracefulShutdownExample() {
 	srv := nethttp.NewServer()
 
 	router := nethttp.NewRouter()
-	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		time.Sleep(50 * time.Millisecond)
 		hc.AbortJSON(200, map[string]string{"status": "ok"})
+		return nil
 	})
 
 	go func() {

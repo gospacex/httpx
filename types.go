@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-type HandlerFunc func(ctx context.Context, hc HandlerContext)
+type HandlerFunc func(ctx context.Context, hc HandlerContext) error
 
 type HandlerContext interface {
 	Request() interface{}
