@@ -1,0 +1,93 @@
+# httpx 架构图 - 统一 HTTP 框架适配层
+
+title: httpx Architecture Overview
+
+# 用户代码层
+user_code: 用户代码 {
+    shape: rectangle
+    style.fill: "#E8F4FD"
+}
+
+# 核心接口层
+core: httpx 核心 {
+    shape: rectangle
+    style.fill: "#D4E6F1"
+
+    app: "App" {
+        shape: circle
+        style.fill: "#85C1E9"
+        label: "New() | Run()"
+    }
+
+    router: "Router" {
+        shape: circle
+        style.fill: "#85C1E9"
+        label: "GET() | POST() | GROUP()"
+    }
+
+    types: "Types" {
+        shape: circle
+        style.fill: "#85C1E9"
+        label: "HandlerFunc | MiddlewareFunc"
+    }
+
+    config: "Config" {
+        shape: circle
+        style.fill: "#85C1E9"
+        label: "LoadConfig()"
+    }
+}
+
+# 适配器注册
+registry: Adapter Registry {
+    shape: hexagon
+    style.fill: "#AED6F1"
+}
+
+# 适配器层
+adapters: 适配器 {
+    shape: rectangle
+    style.fill: "#D5F5E3"
+
+    gin: Gin {
+        shape: hexagon
+        style.fill: "#82E0AA"
+    }
+
+    hertz: Hertz {
+        shape: hexagon
+        style.fill: "#82E0AA"
+    }
+
+    nethttp: net/http {
+        shape: hexagon
+        style.fill: "#82E0AA"
+    }
+}
+
+# 底层框架
+frameworks: 底层框架 {
+    shape: rectangle
+    style.fill: "#F9E79F"
+
+    gin_fw: Gin Engine {
+        shape: rectangle
+        style.fill: "#F7DC6F"
+    }
+
+    hertz_fw: Hertz Engine {
+        shape: rectangle
+        style.fill: "#F7DC6F"
+    }
+
+    nethttp_fw: http.Server {
+        shape: rectangle
+        style.fill: "#F7DC6F"
+    }
+}
+
+# 连接关系
+user_code -> core
+core -> registry
+registry -> adapters
+adapters -> frameworks

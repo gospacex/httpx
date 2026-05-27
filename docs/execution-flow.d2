@@ -1,0 +1,126 @@
+# httpx 请求执行流程图
+
+title: Request Execution Flow
+
+# 初始化阶段
+init: 初始化阶段 {
+    shape: rectangle
+    style.fill: "#E8F8F5"
+
+    step1: 用户调用 New(config.yaml) {
+        shape: hexagon
+        style.fill: "#82E0AA"
+    }
+
+    step2: LoadConfig() 加载配置 {
+        shape: hexagon
+        style.fill: "#82E0AA"
+    }
+
+    step3: getAdapter() 获取适配器工厂 {
+        shape: hexagon
+        style.fill: "#82E0AA"
+    }
+
+    step4: 创建 App 实例 + router {
+        shape: hexagon
+        style.fill: "#82E0AA"
+    }
+}
+
+# 路由注册阶段
+registration: 路由注册阶段 {
+    shape: rectangle
+    style.fill: "#FEF9E7"
+
+    step5: app.GET() / POST() 等 {
+        shape: hexagon
+        style.fill: "#F7DC6F"
+    }
+
+    step6: router.addRoute() 记录路由 {
+        shape: hexagon
+        style.fill: "#F7DC6F"
+    }
+
+    step7: app.Use() 注册中间件 {
+        shape: hexagon
+        style.fill: "#F7DC6F"
+    }
+
+    step8: app.Group() 创建路由组 {
+        shape: hexagon
+        style.fill: "#F7DC6F"
+    }
+}
+
+# 启动阶段
+startup: 启动阶段 {
+    shape: rectangle
+    style.fill: "#FDEDEC"
+
+    step9: app.Run() 调用适配器 {
+        shape: hexagon
+        style.fill: "#F1948A"
+    }
+
+    step10: adapter() 创建 Server 实例 {
+        shape: hexagon
+        style.fill: "#F1948A"
+    }
+
+    step11: srv.Use(middlewares) 注入中间件 {
+        shape: hexagon
+        style.fill: "#F1948A"
+    }
+
+    step12: router.setupToRouter() 同步路由 {
+        shape: hexagon
+        style.fill: "#F1948A"
+    }
+
+    step13: srv.Start(addr) 启动服务 {
+        shape: hexagon
+        style.fill: "#F1948A"
+    }
+}
+
+# 请求处理阶段
+request: 请求处理阶段 {
+    shape: rectangle
+    style.fill: "#EBF5FB"
+
+    req: HTTP Request {
+        shape: circle
+        style.fill: "#3498DB"
+    }
+
+    step14: 中间件链式调用 {
+        shape: hexagon
+        style.fill: "#85C1E9"
+    }
+
+    step15: HandlerFunc(ctx, hc) {
+        shape: hexagon
+        style.fill: "#85C1E9"
+    }
+
+    step16: hc.AbortJSON() / Response() {
+        shape: hexagon
+        style.fill: "#85C1E9"
+    }
+
+    resp: HTTP Response {
+        shape: circle
+        style.fill: "#3498DB"
+    }
+}
+
+# 请求流程箭头
+init -> registration
+registration -> startup
+startup -> request
+request -> req
+step14 -> step15
+step15 -> step16
+step16 -> resp
