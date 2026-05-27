@@ -131,7 +131,7 @@ func (s *GinServer) GracefulShutdown(ctx context.Context) error {
 	return s.httpSrv.Shutdown(ctx)
 }
 
-func (s *GinServer) Engine() interface{} {
+func (s *GinServer) Engine() *gin.Engine {
 	return s.engine
 }
 

@@ -39,8 +39,9 @@ func TestGinServer_StartStop(t *testing.T) {
 func TestGinServer_GracefulShutdown(t *testing.T) {
 	srv := NewServer()
 	router := srv.Router()
-	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		time.Sleep(100 * time.Millisecond)
+		return nil
 	})
 
 	go func() {
@@ -64,8 +65,9 @@ func TestGinServer_Router_GET(t *testing.T) {
 	router := srv.Router()
 
 	called := false
-	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		called = true
+		return nil
 	})
 
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -82,8 +84,9 @@ func TestGinServer_Router_POST(t *testing.T) {
 	router := srv.Router()
 
 	called := false
-	router.POST("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.POST("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		called = true
+		return nil
 	})
 
 	req := httptest.NewRequest("POST", "/test", nil)
@@ -100,8 +103,9 @@ func TestGinServer_Router_PUT(t *testing.T) {
 	router := srv.Router()
 
 	called := false
-	router.PUT("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.PUT("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		called = true
+		return nil
 	})
 
 	req := httptest.NewRequest("PUT", "/test", nil)
@@ -118,8 +122,9 @@ func TestGinServer_Router_DELETE(t *testing.T) {
 	router := srv.Router()
 
 	called := false
-	router.DELETE("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.DELETE("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		called = true
+		return nil
 	})
 
 	req := httptest.NewRequest("DELETE", "/test", nil)
@@ -136,8 +141,9 @@ func TestGinServer_Router_PATCH(t *testing.T) {
 	router := srv.Router()
 
 	called := false
-	router.PATCH("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.PATCH("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		called = true
+		return nil
 	})
 
 	req := httptest.NewRequest("PATCH", "/test", nil)
@@ -155,8 +161,9 @@ func TestGinServer_RouterGroup(t *testing.T) {
 
 	group := router.GROUP("/api")
 	rg := group.Router.(*ginRouterGroup)
-	rg.GET("/hello", func(ctx context.Context, hc httpx.HandlerContext) {
+	rg.GET("/hello", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, map[string]string{"message": "hello"})
+		return nil
 	})
 
 	req := httptest.NewRequest("GET", "/api/hello", nil)
@@ -174,8 +181,9 @@ func TestGinServer_RouterGroup_GET(t *testing.T) {
 
 	group := router.GROUP("/api")
 	rg := group.Router.(*ginRouterGroup)
-	rg.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	rg.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, nil)
+		return nil
 	})
 
 	req := httptest.NewRequest("GET", "/api/test", nil)
@@ -193,8 +201,9 @@ func TestGinServer_RouterGroup_POST(t *testing.T) {
 
 	group := router.GROUP("/api")
 	rg := group.Router.(*ginRouterGroup)
-	rg.POST("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	rg.POST("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, nil)
+		return nil
 	})
 
 	req := httptest.NewRequest("POST", "/api/test", nil)
@@ -211,9 +220,10 @@ func TestGinServer_HandlerContext_Query(t *testing.T) {
 	router := srv.Router()
 
 	var queryValue string
-	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		queryValue = hc.Query("name")
 		hc.AbortJSON(200, nil)
+		return nil
 	})
 
 	req := httptest.NewRequest("GET", "/test?name=alice", nil)
@@ -230,9 +240,10 @@ func TestGinServer_HandlerContext_Param(t *testing.T) {
 	router := srv.Router()
 
 	var paramValue string
-	router.GET("/users/:id", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.GET("/users/:id", func(ctx context.Context, hc httpx.HandlerContext) error {
 		paramValue = hc.Param("id")
 		hc.AbortJSON(200, nil)
+		return nil
 	})
 
 	req := httptest.NewRequest("GET", "/users/123", nil)
@@ -248,8 +259,9 @@ func TestGinServer_HandlerContext_AbortWithStatus(t *testing.T) {
 	srv := NewServer()
 	router := srv.Router()
 
-	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortWithStatus(404)
+		return nil
 	})
 
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -265,8 +277,9 @@ func TestGinServer_HandlerContext_AbortJSON(t *testing.T) {
 	srv := NewServer()
 	router := srv.Router()
 
-	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, map[string]string{"key": "value"})
+		return nil
 	})
 
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -286,15 +299,17 @@ func TestGinServer_ServerMiddleware(t *testing.T) {
 
 	middlewareCalled := false
 	srv.Use(func(next httpx.HandlerFunc) httpx.HandlerFunc {
-		return func(ctx context.Context, hc httpx.HandlerContext) {
+		return func(ctx context.Context, hc httpx.HandlerContext) error {
 			middlewareCalled = true
 			next(ctx, hc)
+			return nil
 		}
 	})
 
 	router := srv.Router()
-	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, nil)
+		return nil
 	})
 
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -311,9 +326,10 @@ func TestGinServer_WS(t *testing.T) {
 	router := srv.Router()
 
 	handlerCalled := false
-	router.WS("/ws", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.WS("/ws", func(ctx context.Context, hc httpx.HandlerContext) error {
 		handlerCalled = true
 		hc.AbortJSON(200, nil)
+		return nil
 	})
 
 	req := httptest.NewRequest("GET", "/ws", nil)
@@ -332,8 +348,9 @@ func TestGinServer_RouterGroup_WS(t *testing.T) {
 
 	group := router.GROUP("/api")
 	rg := group.Router.(*ginRouterGroup)
-	rg.WS("/ws", func(ctx context.Context, hc httpx.HandlerContext) {
+	rg.WS("/ws", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, nil)
+		return nil
 	})
 
 	req := httptest.NewRequest("GET", "/api/ws", nil)
