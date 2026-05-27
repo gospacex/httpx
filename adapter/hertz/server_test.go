@@ -30,8 +30,9 @@ func TestHertzServer_Router_GET(t *testing.T) {
 	srv := NewServer()
 	router := srv.Router()
 
-	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, nil)
+		return nil
 	})
 }
 
@@ -39,8 +40,9 @@ func TestHertzServer_Router_POST(t *testing.T) {
 	srv := NewServer()
 	router := srv.Router()
 
-	router.POST("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.POST("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, nil)
+		return nil
 	})
 }
 
@@ -50,8 +52,9 @@ func TestHertzServer_RouterGroup(t *testing.T) {
 
 	group := router.GROUP("/api")
 	rg := group.Router.(*hertzRouterGroup)
-	rg.GET("/hello", func(ctx context.Context, hc httpx.HandlerContext) {
+	rg.GET("/hello", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, map[string]string{"message": "hello"})
+		return nil
 	})
 }
 
@@ -62,12 +65,14 @@ func TestHertzServer_RouterGroup_Use(t *testing.T) {
 	group := router.GROUP("/api")
 	rg := group.Router.(*hertzRouterGroup)
 	rg.Use(func(next httpx.HandlerFunc) httpx.HandlerFunc {
-		return func(ctx context.Context, hc httpx.HandlerContext) {
+		return func(ctx context.Context, hc httpx.HandlerContext) error {
 			hc.AbortJSON(200, map[string]string{"middleware": "called"})
+			return nil
 		}
 	})
-	rg.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	rg.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, nil)
+		return nil
 	})
 }
 
@@ -78,20 +83,25 @@ func TestHertzServer_RouterGroup_HTTPMethods(t *testing.T) {
 	group := router.GROUP("/api")
 	rg := group.Router.(*hertzRouterGroup)
 
-	rg.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	rg.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, nil)
+		return nil
 	})
-	rg.POST("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	rg.POST("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, nil)
+		return nil
 	})
-	rg.PUT("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	rg.PUT("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, nil)
+		return nil
 	})
-	rg.DELETE("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	rg.DELETE("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, nil)
+		return nil
 	})
-	rg.PATCH("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	rg.PATCH("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, nil)
+		return nil
 	})
 }
 
@@ -99,9 +109,10 @@ func TestHertzServer_HandlerContext_Query(t *testing.T) {
 	srv := NewServer()
 	router := srv.Router()
 
-	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		_ = hc.Query("name")
 		hc.AbortJSON(200, nil)
+		return nil
 	})
 }
 
@@ -109,9 +120,10 @@ func TestHertzServer_HandlerContext_Param(t *testing.T) {
 	srv := NewServer()
 	router := srv.Router()
 
-	router.GET("/users/:id", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.GET("/users/:id", func(ctx context.Context, hc httpx.HandlerContext) error {
 		_ = hc.Param("id")
 		hc.AbortJSON(200, nil)
+		return nil
 	})
 }
 
@@ -119,8 +131,9 @@ func TestHertzServer_HandlerContext_AbortWithStatus(t *testing.T) {
 	srv := NewServer()
 	router := srv.Router()
 
-	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortWithStatus(404)
+		return nil
 	})
 }
 
@@ -128,8 +141,9 @@ func TestHertzServer_HandlerContext_AbortJSON(t *testing.T) {
 	srv := NewServer()
 	router := srv.Router()
 
-	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, map[string]string{"key": "value"})
+		return nil
 	})
 }
 
@@ -137,14 +151,16 @@ func TestHertzServer_Middleware_Chaining(t *testing.T) {
 	srv := NewServer()
 
 	srv.Use(func(next httpx.HandlerFunc) httpx.HandlerFunc {
-		return func(ctx context.Context, hc httpx.HandlerContext) {
+		return func(ctx context.Context, hc httpx.HandlerContext) error {
 			next(ctx, hc)
+			return nil
 		}
 	})
 
 	router := srv.Router()
-	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, nil)
+		return nil
 	})
 }
 
@@ -152,8 +168,9 @@ func TestHertzServer_WS(t *testing.T) {
 	srv := NewServer()
 	router := srv.Router()
 
-	router.WS("/ws", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.WS("/ws", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, nil)
+		return nil
 	})
 }
 
@@ -177,8 +194,9 @@ func TestHertzServer_EnableWS(t *testing.T) {
 func TestHertzServer_StartWithGraceful(t *testing.T) {
 	srv := NewServer(WithHostPorts(":0"))
 	router := srv.Router()
-	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) {
+	router.GET("/test", func(ctx context.Context, hc httpx.HandlerContext) error {
 		hc.AbortJSON(200, nil)
+		return nil
 	})
 
 	go func() {
